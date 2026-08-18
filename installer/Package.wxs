@@ -1,0 +1,47 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="TaskLens"
+    Manufacturer="Vipul Bhojwani"
+    Version="0.1.0"
+    UpgradeCode="3D6C02B8-2B4B-4E70-9E7F-EB4AD46F530E"
+    Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of TaskLens is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="MainFeature" Title="TaskLens" Level="1">
+      <ComponentGroupRef Id="PublishedFiles" />
+      <ComponentRef Id="ApplicationShortcut" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="TaskLens" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="TaskLens" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="PublishedFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)\**">
+        <Exclude Files="**\*.pdb" />
+      </Files>
+    </ComponentGroup>
+
+    <Component Id="ApplicationShortcut" Directory="ApplicationProgramsFolder">
+      <Shortcut
+        Id="TaskLensStartMenuShortcut"
+        Name="TaskLens"
+        Description="Turn work context into clear, reviewed tasks."
+        Target="[INSTALLFOLDER]TaskLens.App.exe"
+        WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue
+        Root="HKLM"
+        Key="Software\Prequarto\TaskLens"
+        Name="Installed"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+    </Component>
+  </Package>
+</Wix>
