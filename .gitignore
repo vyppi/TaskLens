@@ -482,3 +482,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# The generated WinUI project directory ends in ".App", which would otherwise
+# match the generic macOS application bundle rule above.
+!src/TaskLens.App/
+!src/TaskLens.App/**

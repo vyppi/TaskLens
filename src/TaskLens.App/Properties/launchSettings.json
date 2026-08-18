@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TaskLens.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "TaskLens.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
