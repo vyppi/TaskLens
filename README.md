@@ -60,9 +60,14 @@ Run PowerShell as Administrator because the Win32 MSI is per-machine:
 
 The script creates:
 
+- `artifacts\win32\TaskLens-win-x64.zip`
 - `artifacts\win32\installer\TaskLens.Installer.msi`
 - a signed sideload MSIX under `artifacts\msix\sideload`
 - an unsigned Store upload under `artifacts\msix\store`
+
+For portable testing, extract `TaskLens-win-x64.zip` into a new folder and run
+`TaskLens.App.exe`. Do not run an executable left in an older build directory;
+the application depends on the matching DLLs and resources beside it.
 - `artifacts\certificate\TaskLens-Development.cer` for local installation
 
 The script generates an ephemeral self-signed certificate, signs every Win32 PE

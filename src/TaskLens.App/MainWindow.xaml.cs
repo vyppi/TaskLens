@@ -20,7 +20,8 @@ public sealed partial class MainWindow : Window
         SetTitleBar(AppTitleBar);
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1180, 760));
 
-        AppWindow.SetIcon("Assets/AppIcon.ico");
+        AppWindow.SetIcon(
+            Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
 
         // Navigate the root frame to the main page on startup.
         RootFrame.Navigate(typeof(MainPage));

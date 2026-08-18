@@ -15,6 +15,7 @@ $installerProject = Join-Path $root "installer\TaskLens.Installer.wixproj"
 $artifacts = Join-Path $root "artifacts"
 $publishDir = Join-Path $artifacts "staging\win32-$([Guid]::NewGuid().ToString('N'))"
 $installerDir = Join-Path $artifacts "win32\installer"
+$portableZip = Join-Path $artifacts "win32\TaskLens-win-x64.zip"
 $msixDir = Join-Path $artifacts "msix\sideload"
 $storeUploadDir = Join-Path $artifacts "msix\store"
 $certificateDir = Join-Path $artifacts "certificate"
@@ -81,6 +82,11 @@ try {
                 throw "Signing failed for $($_.FullName)."
             }
         }
+
+    Compress-Archive `
+        -Path (Join-Path $publishDir "*") `
+        -DestinationPath $portableZip `
+        -Force
 
     dotnet build $installerProject `
         -c $Configuration `
@@ -160,6 +166,7 @@ try {
 
     Write-Host ""
     Write-Host "TaskLens artifacts:"
+    Write-Host "  Portable Win32:  $portableZip"
     Write-Host "  Win32 installer: $($msi.FullName)"
     Write-Host "  Signed MSIX:     $($msix.FullName)"
     Write-Host "  Store upload:    $($storeUpload.FullName)"
