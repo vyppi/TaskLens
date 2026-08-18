@@ -62,8 +62,8 @@ The script creates:
 
 - `artifacts\win32\TaskLens-win-x64.zip`
 - `artifacts\win32\installer\TaskLens.Installer.msi`
-- a signed sideload MSIX under `artifacts\msix\sideload`
-- an unsigned Store upload under `artifacts\msix\store`
+- a signed sideload MSIX under a timestamped `artifacts\msix\sideload` folder
+- an unsigned Store upload under a timestamped `artifacts\msix\store` folder
 
 For portable testing, extract `TaskLens-win-x64.zip` into a new folder and run
 `TaskLens.App.exe`. Do not run an executable left in an older build directory;

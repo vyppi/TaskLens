@@ -13,11 +13,12 @@ $appProject = Join-Path $root "src\TaskLens.App\TaskLens.App.csproj"
 $testProject = Join-Path $root "tests\TaskLens.Core.Tests\TaskLens.Core.Tests.csproj"
 $installerProject = Join-Path $root "installer\TaskLens.Installer.wixproj"
 $artifacts = Join-Path $root "artifacts"
+$buildId = Get-Date -Format "yyyyMMdd-HHmmss"
 $publishDir = Join-Path $artifacts "staging\win32-$([Guid]::NewGuid().ToString('N'))"
 $installerDir = Join-Path $artifacts "win32\installer"
 $portableZip = Join-Path $artifacts "win32\TaskLens-win-x64.zip"
-$msixDir = Join-Path $artifacts "msix\sideload"
-$storeUploadDir = Join-Path $artifacts "msix\store"
+$msixDir = Join-Path $artifacts "msix\sideload\$buildId"
+$storeUploadDir = Join-Path $artifacts "msix\store\$buildId"
 $certificateDir = Join-Path $artifacts "certificate"
 $temporaryPfx = Join-Path ([System.IO.Path]::GetTempPath()) "tasklens-$([Guid]::NewGuid().ToString('N')).pfx"
 $certificatePassword = [Convert]::ToBase64String(
@@ -40,6 +41,7 @@ try {
         -KeyExportPolicy Exportable `
         -KeyLength 2048 `
         -HashAlgorithm SHA256 `
+        -TextExtension @("2.5.29.19={critical}{text}ca=false") `
         -NotAfter (Get-Date).AddYears(2)
 
     $securePassword = ConvertTo-SecureString $certificatePassword -AsPlainText -Force
