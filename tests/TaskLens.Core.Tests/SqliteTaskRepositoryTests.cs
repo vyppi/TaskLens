@@ -25,16 +25,30 @@ public sealed class SqliteTaskRepositoryTests
     }
 
     [TestMethod]
-    public async Task InitializeAsync_SeedsDefaultAreas()
+    public async Task InitializeAsync_SeedsGenericArea()
     {
         var repository = new SqliteTaskRepository(_databasePath);
 
         await repository.InitializeAsync();
         var areas = await repository.GetAreasAsync();
 
-        Assert.HasCount(4, areas);
-        CollectionAssert.Contains(areas.Select(area => area.Id).ToList(), "blue-badge");
-        CollectionAssert.Contains(areas.Select(area => area.Id).ToList(), "manager");
+        Assert.HasCount(1, areas);
+        Assert.AreEqual("general", areas[0].Id);
+        Assert.AreEqual("General", areas[0].Name);
+    }
+
+    [TestMethod]
+    public async Task CreateAreaAsync_NewArea_PersistsArea()
+    {
+        var repository = new SqliteTaskRepository(_databasePath);
+        await repository.InitializeAsync();
+
+        await repository.CreateAreaAsync(
+            new WorkArea("launch", "Product Launch", "#2563EB"));
+        var areas = await repository.GetAreasAsync();
+
+        Assert.HasCount(2, areas);
+        Assert.AreEqual("Product Launch", areas[1].Name);
     }
 
     [TestMethod]
@@ -72,7 +86,7 @@ public sealed class SqliteTaskRepositoryTests
             Guid.NewGuid().ToString("N"),
             "Prepare weekly update",
             string.Empty,
-            "blue-badge",
+            "general",
             DateTimeOffset.Now.AddDays(1),
             30,
             TaskPriority.High,

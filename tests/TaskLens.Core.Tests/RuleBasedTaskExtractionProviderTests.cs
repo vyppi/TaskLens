@@ -7,10 +7,10 @@ public sealed class RuleBasedTaskExtractionProviderTests
 {
     private static readonly WorkArea[] Areas =
     [
-        new("blue-badge", "Project Blue Badge", "#2563EB"),
-        new("ai-certification", "AI Certification", "#7C3AED"),
-        new("manager", "Manager", "#DB2777"),
-        new("personal", "Personal", "#059669")
+        new("launch", "Product Launch", "#2563EB"),
+        new("learning", "Learning", "#7C3AED"),
+        new("people", "People Management", "#DB2777"),
+        new("general", "General", "#059669")
     ];
 
     [TestMethod]
@@ -20,15 +20,15 @@ public sealed class RuleBasedTaskExtractionProviderTests
 
         var result = await provider.ExtractAsync(
             """
-            Alex: Action item: send the Blue Badge status update by Friday.
-            I need to schedule my manager 1:1 tomorrow for 30 minutes.
+            Alex: Action item: send the Product Launch status update by Friday.
+            I need to schedule the People Management review tomorrow for 30 minutes.
             This paragraph is only background information.
             """,
             Areas);
 
         Assert.HasCount(2, result.Suggestions);
-        Assert.AreEqual("blue-badge", result.Suggestions[0].AreaId);
-        Assert.AreEqual("manager", result.Suggestions[1].AreaId);
+        Assert.AreEqual("launch", result.Suggestions[0].AreaId);
+        Assert.AreEqual("people", result.Suggestions[1].AreaId);
         Assert.AreEqual(30, result.Suggestions[1].EstimatedMinutes);
         Assert.IsNotNull(result.Suggestions[1].DueAt);
     }
@@ -39,12 +39,28 @@ public sealed class RuleBasedTaskExtractionProviderTests
         var provider = new RuleBasedTaskExtractionProvider();
 
         var result = await provider.ExtractAsync(
-            "TODO: finish the AI certification practice exam ASAP.",
+            "TODO: finish the Learning practice exam ASAP.",
             Areas);
 
         Assert.HasCount(1, result.Suggestions);
         Assert.AreEqual(TaskPriority.High, result.Suggestions[0].Priority);
-        Assert.AreEqual("ai-certification", result.Suggestions[0].AreaId);
+        Assert.AreEqual("learning", result.Suggestions[0].AreaId);
+    }
+
+    [TestMethod]
+    public async Task ExtractAsync_BulletedBrainDump_CapturesEachBullet()
+    {
+        var provider = new RuleBasedTaskExtractionProvider();
+
+        var result = await provider.ExtractAsync(
+            """
+            - Book the customer review
+            - Draft launch notes
+            Background context without an action.
+            """,
+            Areas);
+
+        Assert.HasCount(2, result.Suggestions);
     }
 
     [TestMethod]

@@ -6,7 +6,8 @@ transcripts and brain dumps into reviewed, explainable tasks.
 ## MVP
 
 - My Day, Inbox, Upcoming, Completed, and area views
-- Seeded areas for Project Blue Badge, AI Certification, Manager, and Personal
+- User-created areas, with drag-and-drop task movement between them
+- Task editing for title, area, completion date, estimate, and priority
 - Local SQLite storage under `%LOCALAPPDATA%\TaskLens`
 - Quick task creation, completion, and deletion
 - Transcript and brain-dump action extraction
@@ -21,7 +22,10 @@ dotnet run --project .\src\TaskLens.App\TaskLens.App.csproj `
   -c Debug -p:Platform=x64 -p:RuntimeIdentifier=win-x64
 ```
 
-Without AI configuration, TaskLens uses its small offline extractor. To use an
+Without AI configuration, TaskLens uses an explicitly labelled rules-based
+offline extractor. It recognizes bullets, checklists, commitment phrases,
+relative dates, estimates, priorities, and area-name matches, but it does not
+understand context like a language model. To use an
 OpenAI-compatible or Azure OpenAI chat-completions endpoint, set these
 environment variables before launch:
 
@@ -32,6 +36,17 @@ $env:TASKLENS_AI_MODEL = "<model-or-deployment>"
 ```
 
 Secrets are never written to the TaskLens database.
+
+## Planning views
+
+- **Inbox**: incomplete tasks with no completion date.
+- **My Day**: incomplete tasks due today or overdue.
+- **Upcoming**: incomplete tasks with a future completion date.
+- **Completed**: finished tasks.
+
+Areas describe the responsibility or project a task belongs to. Planning views
+describe when the task needs attention, so a task belongs to one area while
+also appearing in a planning view.
 
 ## Test
 

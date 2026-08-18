@@ -11,7 +11,13 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
         "to-do",
         "need to",
         "needs to",
+        "should ",
+        "i'll ",
+        "we'll ",
         "will ",
+        "can you",
+        "could you",
+        "please ",
         "follow up",
         "send ",
         "schedule ",
@@ -25,7 +31,7 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
         "finish "
     ];
 
-    public string Name => "On-device quick extraction";
+    public string Name => "Offline quick extraction (rules, not a language model)";
 
     public Task<ExtractionResult> ExtractAsync(
         string content,
@@ -38,18 +44,19 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
         var lines = content
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .SelectMany(SplitSentences)
-            .Select(CleanLine)
-            .Where(line => line.Length >= 6)
-            .Distinct(StringComparer.OrdinalIgnoreCase);
+            .Select(line => new CaptureLine(CleanLine(line), IsListItem(line)))
+            .Where(item => item.Text.Length >= 6)
+            .DistinctBy(item => item.Text, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var line in lines)
+        foreach (var item in lines)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!LooksActionable(line))
+            if (!item.IsListItem && !LooksActionable(item.Text))
             {
                 continue;
             }
 
+            var line = item.Text;
             var title = NormalizeTitle(line);
             suggestions.Add(new TaskSuggestion(
                 title,
@@ -58,8 +65,10 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
                 InferDuration(line),
                 InferPriority(line),
                 line.Length <= 180 ? line : $"{line[..177]}...",
-                "Detected an actionable statement in the pasted text.",
-                CalculateConfidence(line)));
+                item.IsListItem
+                    ? "Detected a checklist or bullet item."
+                    : "Detected action-oriented wording in the pasted text.",
+                CalculateConfidence(line, item.IsListItem)));
         }
 
         return Task.FromResult(new ExtractionResult(
@@ -72,6 +81,9 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
 
     private static string CleanLine(string line) =>
         BulletPrefixRegex().Replace(line.Trim(), string.Empty).Trim();
+
+    private static bool IsListItem(string line) =>
+        BulletPrefixRegex().IsMatch(line);
 
     private static bool LooksActionable(string line) =>
         ActionSignals.Any(signal =>
@@ -94,22 +106,24 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
 
     private static string InferArea(string line, IReadOnlyList<WorkArea> areas)
     {
-        var target = line.Contains("blue badge", StringComparison.OrdinalIgnoreCase)
-            ? "blue-badge"
-            : line.Contains("certif", StringComparison.OrdinalIgnoreCase) ||
-              line.Contains("learn", StringComparison.OrdinalIgnoreCase) ||
-              line.Contains("exam", StringComparison.OrdinalIgnoreCase)
-                ? "ai-certification"
-                : line.Contains("manager", StringComparison.OrdinalIgnoreCase) ||
-                  line.Contains("1:1", StringComparison.OrdinalIgnoreCase) ||
-                  line.Contains("one-on-one", StringComparison.OrdinalIgnoreCase)
-                    ? "manager"
-                    : "personal";
+        var bestMatch = areas
+            .Select(area => new
+            {
+                Area = area,
+                Score = AreaTokens(area.Name)
+                    .Count(token => line.Contains(token, StringComparison.OrdinalIgnoreCase))
+            })
+            .OrderByDescending(match => match.Score)
+            .FirstOrDefault();
 
-        return areas.Any(area => area.Id == target)
-            ? target
-            : areas.FirstOrDefault()?.Id ?? "personal";
+        return bestMatch is { Score: > 0 }
+            ? bestMatch.Area.Id
+            : areas.FirstOrDefault()?.Id ?? "general";
     }
+
+    private static IEnumerable<string> AreaTokens(string areaName) =>
+        Regex.Split(areaName, @"[^\p{L}\p{N}]+")
+            .Where(token => token.Length >= 3);
 
     private static DateTimeOffset? InferDueDate(string line)
     {
@@ -166,9 +180,9 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
             ? TaskPriority.High
             : TaskPriority.Normal;
 
-    private static double CalculateConfidence(string line)
+    private static double CalculateConfidence(string line, bool isListItem)
     {
-        var score = 0.62;
+        var score = isListItem ? 0.7 : 0.58;
         if (line.Contains("action item", StringComparison.OrdinalIgnoreCase) ||
             line.Contains("todo", StringComparison.OrdinalIgnoreCase))
         {
@@ -182,6 +196,8 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
 
         return Math.Min(score, 0.95);
     }
+
+    private sealed record CaptureLine(string Text, bool IsListItem);
 
     [GeneratedRegex(@"^\s*(?:[-*•]|\d+[.)]|\[[ xX]\])\s*")]
     private static partial Regex BulletPrefixRegex();

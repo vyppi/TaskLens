@@ -29,6 +29,9 @@ public sealed class SqliteTaskRepository(string databasePath) : ITaskRepository
                 Color TEXT NOT NULL
             );
 
+            CREATE UNIQUE INDEX IF NOT EXISTS IX_Areas_Name
+            ON Areas (Name COLLATE NOCASE);
+
             CREATE TABLE IF NOT EXISTS Tasks (
                 Id TEXT PRIMARY KEY,
                 Title TEXT NOT NULL,
@@ -46,11 +49,12 @@ public sealed class SqliteTaskRepository(string databasePath) : ITaskRepository
                 FOREIGN KEY (AreaId) REFERENCES Areas(Id)
             );
 
-            INSERT OR IGNORE INTO Areas (Id, Name, Color) VALUES
-                ('blue-badge', 'Project Blue Badge', '#2563EB'),
-                ('ai-certification', 'AI Certification', '#7C3AED'),
-                ('manager', 'Manager', '#DB2777'),
-                ('personal', 'Personal', '#059669');
+            DELETE FROM Areas
+            WHERE Id IN ('blue-badge', 'ai-certification', 'manager', 'personal')
+              AND NOT EXISTS (SELECT 1 FROM Tasks WHERE Tasks.AreaId = Areas.Id);
+
+            INSERT OR IGNORE INTO Areas (Id, Name, Color)
+            VALUES ('general', 'General', '#2563EB');
             """;
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -75,6 +79,25 @@ public sealed class SqliteTaskRepository(string databasePath) : ITaskRepository
         }
 
         return areas;
+    }
+
+    public async Task CreateAreaAsync(
+        WorkArea area,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(area.Id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(area.Name);
+
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        var command = connection.CreateCommand();
+        command.CommandText =
+            "INSERT INTO Areas (Id, Name, Color) VALUES ($id, $name, $color);";
+        command.Parameters.AddWithValue("$id", area.Id);
+        command.Parameters.AddWithValue("$name", area.Name.Trim());
+        command.Parameters.AddWithValue("$color", area.Color);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<TaskItem>> GetTasksAsync(

@@ -14,8 +14,8 @@ automation to create or schedule work.
 ## MVP requirements
 
 1. Users can create, complete, reopen, delete, and locally persist tasks.
-2. Users can organize tasks into Project Blue Badge, AI Certification, Manager,
-   and Personal areas.
+2. Users can create their own areas and move tasks between them, including by
+   dragging a task onto an area.
 3. Users can see My Day, Inbox, Upcoming, Completed, and area-filtered views.
 4. Users can paste unstructured notes or transcripts and extract candidate
    action items.

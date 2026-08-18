@@ -7,6 +7,10 @@ public interface ITaskRepository
     Task<IReadOnlyList<WorkArea>> GetAreasAsync(
         CancellationToken cancellationToken = default);
 
+    Task CreateAreaAsync(
+        WorkArea area,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<TaskItem>> GetTasksAsync(
         CancellationToken cancellationToken = default);
 

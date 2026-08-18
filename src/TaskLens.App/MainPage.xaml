@@ -47,7 +47,13 @@
             </NavigationView.MenuItems>
 
             <NavigationView.PaneFooter>
-                <StackPanel Margin="12" Spacing="4">
+                <StackPanel Margin="12" Spacing="8">
+                    <Button Click="AddArea_Click" HorizontalAlignment="Stretch">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" />
+                            <TextBlock Text="New area" />
+                        </StackPanel>
+                    </Button>
                     <TextBlock Text="TaskLens" Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock Text="Local-first. Review before create." Opacity="0.65" FontSize="12" />
                 </StackPanel>
@@ -97,10 +103,16 @@
                                     Text="Paste meeting notes, a transcript, or everything on your mind. Nothing becomes a task until you review it."
                                     TextWrapping="Wrap"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <InfoBar
+                                    IsOpen="True"
+                                    IsClosable="False"
+                                    Severity="Informational"
+                                    Title="Capture provider"
+                                    Message="{x:Bind ViewModel.CaptureProviderDescription}" />
                                 <TextBox
                                     AcceptsReturn="True"
                                     Height="180"
-                                    PlaceholderText="Example: Action item: send the Blue Badge status update by Friday..."
+                                    PlaceholderText="Example: Action item: send the launch status update by Friday..."
                                     Text="{x:Bind ViewModel.CaptureText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                     TextWrapping="Wrap" />
                                 <Button
@@ -146,6 +158,9 @@
                     </StackPanel>
 
                     <ListView
+                        x:Name="TaskList"
+                        CanDragItems="True"
+                        DragItemsStarting="TaskList_DragItemsStarting"
                         ItemsSource="{x:Bind ViewModel.VisibleTasks}"
                         SelectionMode="None"
                         Visibility="{x:Bind ViewModel.TaskListVisibility, Mode=OneWay}">
@@ -158,6 +173,7 @@
                                     CornerRadius="8">
                                     <Grid ColumnSpacing="12">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -174,6 +190,13 @@
                                         </StackPanel>
                                         <Button
                                             Grid.Column="2"
+                                            Click="EditTask_Click"
+                                            Tag="{x:Bind}"
+                                            ToolTipService.ToolTip="Edit">
+                                            <FontIcon Glyph="&#xE70F;" />
+                                        </Button>
+                                        <Button
+                                            Grid.Column="3"
                                             Click="DeleteTask_Click"
                                             Tag="{x:Bind}"
                                             ToolTipService.ToolTip="Delete">

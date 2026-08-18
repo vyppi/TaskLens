@@ -55,6 +55,8 @@ public partial class MainPageViewModel : ObservableObject
     public Visibility TaskListVisibility =>
         IsCaptureVisible ? Visibility.Collapsed : Visibility.Visible;
 
+    public string CaptureProviderDescription => _extractionProvider.Name;
+
     public async Task InitializeAsync()
     {
         IsBusy = true;
@@ -90,7 +92,7 @@ public partial class MainPageViewModel : ObservableObject
             Guid.NewGuid().ToString("N"),
             title,
             string.Empty,
-            SelectedAreaId ?? Areas.FirstOrDefault()?.Id ?? "personal",
+            SelectedAreaId ?? Areas.FirstOrDefault()?.Id ?? "general",
             SelectedView == "My Day" ? DateTimeOffset.Now.Date.AddHours(17) : null,
             30,
             TaskPriority.Normal,
@@ -126,7 +128,7 @@ public partial class MainPageViewModel : ObservableObject
             foreach (var suggestion in result.Suggestions)
             {
                 var areaName = Areas.FirstOrDefault(area => area.Id == suggestion.AreaId)?.Name
-                    ?? "Personal";
+                    ?? "General";
                 Suggestions.Add(new SuggestedTaskViewModel(suggestion, areaName));
             }
 
@@ -197,6 +199,58 @@ public partial class MainPageViewModel : ObservableObject
         await _repository.DeleteTaskAsync(item.Task.Id);
         await ReloadAsync();
         StatusText = "Task deleted";
+    }
+
+    public async Task CreateAreaAsync(string name)
+    {
+        var trimmedName = name.Trim();
+        if (trimmedName.Length == 0)
+        {
+            throw new ArgumentException("Area name is required.", nameof(name));
+        }
+
+        var area = new WorkArea(
+            Guid.NewGuid().ToString("N"),
+            trimmedName,
+            "#2563EB");
+        await _repository.CreateAreaAsync(area);
+        Areas.Add(new AreaOption(area.Id, area.Name, area.Color));
+        StatusText = $"Area '{area.Name}' created";
+    }
+
+    public async Task UpdateTaskAsync(
+        TaskCardViewModel item,
+        string title,
+        string areaId,
+        DateTimeOffset? dueAt,
+        int estimatedMinutes,
+        TaskPriority priority)
+    {
+        var updated = item.Task with
+        {
+            Title = title.Trim(),
+            AreaId = areaId,
+            DueAt = dueAt,
+            EstimatedMinutes = Math.Clamp(estimatedMinutes, 5, 480),
+            Priority = priority
+        };
+        await _repository.SaveTaskAsync(updated);
+        await ReloadAsync();
+        StatusText = "Task updated";
+    }
+
+    public async Task MoveTaskAsync(string taskId, string areaId)
+    {
+        var task = _allTasks.FirstOrDefault(item => item.Id == taskId);
+        if (task is null || Areas.All(area => area.Id != areaId))
+        {
+            return;
+        }
+
+        await _repository.SaveTaskAsync(task with { AreaId = areaId });
+        await ReloadAsync();
+        var areaName = Areas.First(area => area.Id == areaId).Name;
+        StatusText = $"Task moved to {areaName}";
     }
 
     public void SelectView(string view)
