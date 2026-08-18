@@ -81,6 +81,37 @@ public sealed class SqliteTaskRepositoryTests
         Assert.IsEmpty(tasks);
     }
 
+    [TestMethod]
+    public async Task DeleteAreaAsync_AreaWithTasks_MovesTasksBeforeDeleting()
+    {
+        var repository = new SqliteTaskRepository(_databasePath);
+        await repository.InitializeAsync();
+        await repository.CreateAreaAsync(
+            new WorkArea("launch", "Product Launch", "#2563EB"));
+        var task = CreateTask() with { AreaId = "launch" };
+        await repository.SaveTaskAsync(task);
+
+        await repository.DeleteAreaAsync("launch", "general");
+        var areas = await repository.GetAreasAsync();
+        var tasks = await repository.GetTasksAsync();
+
+        Assert.HasCount(1, areas);
+        Assert.AreEqual("general", tasks[0].AreaId);
+    }
+
+    [TestMethod]
+    public async Task DeleteAreaAsync_AreaWithTasksAndNoReplacement_Throws()
+    {
+        var repository = new SqliteTaskRepository(_databasePath);
+        await repository.InitializeAsync();
+        await repository.CreateAreaAsync(
+            new WorkArea("launch", "Product Launch", "#2563EB"));
+        await repository.SaveTaskAsync(CreateTask() with { AreaId = "launch" });
+
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(
+            async () => await repository.DeleteAreaAsync("launch", null));
+    }
+
     private static TaskItem CreateTask() =>
         new(
             Guid.NewGuid().ToString("N"),
@@ -88,7 +119,6 @@ public sealed class SqliteTaskRepositoryTests
             string.Empty,
             "general",
             DateTimeOffset.Now.AddDays(1),
-            30,
             TaskPriority.High,
             false,
             TaskSource.Manual,

@@ -7,13 +7,15 @@ transcripts and brain dumps into reviewed, explainable tasks.
 
 - My Day, Inbox, Upcoming, Completed, and area views
 - User-created areas, with drag-and-drop task movement between them
-- Task editing for title, area, completion date, estimate, and priority
+- Task editing for title, area, due date, and priority
+- Safe area deletion that moves existing tasks instead of deleting them
+- Windows reminders at 9:00 AM on the due date
 - Local SQLite storage under `%LOCALAPPDATA%\TaskLens`
 - Quick task creation, completion, and deletion
 - Transcript and brain-dump action extraction
-- Review inbox showing source excerpt, rationale, area, priority, duration, and
+- Review inbox showing source excerpt, rationale, area, priority, and
   confidence before any task is created
-- Optional OpenAI-compatible cloud extraction
+- Automatic Windows local AI extraction on supported Copilot+ PCs
 
 ## Run locally
 
@@ -22,20 +24,11 @@ dotnet run --project .\src\TaskLens.App\TaskLens.App.csproj `
   -c Debug -p:Platform=x64 -p:RuntimeIdentifier=win-x64
 ```
 
-Without AI configuration, TaskLens uses an explicitly labelled rules-based
-offline extractor. It recognizes bullets, checklists, commitment phrases,
-relative dates, estimates, priorities, and area-name matches, but it does not
-understand context like a language model. To use an
-OpenAI-compatible or Azure OpenAI chat-completions endpoint, set these
-environment variables before launch:
-
-```powershell
-$env:TASKLENS_AI_ENDPOINT = "https://<full-chat-completions-endpoint>"
-$env:TASKLENS_AI_API_KEY = "<key>"
-$env:TASKLENS_AI_MODEL = "<model-or-deployment>"
-```
-
-Secrets are never written to the TaskLens database.
+TaskLens automatically uses the Windows system `LanguageModel` when Windows
+reports it as available. The model runs locally and returns structured JSON for
+reviewed task creation. No API key or environment-variable configuration is
+required. On unsupported systems, TaskLens clearly falls back to its rules-based
+offline extractor.
 
 ## Planning views
 
@@ -47,6 +40,9 @@ Secrets are never written to the TaskLens database.
 Areas describe the responsibility or project a task belongs to. Planning views
 describe when the task needs attention, so a task belongs to one area while
 also appearing in a planning view.
+
+Priority only affects ordering: for tasks with the same due date, High appears
+before Normal, which appears before Low. Priority does not change reminder time.
 
 ## Test
 

@@ -125,17 +125,9 @@ public sealed partial class MainPage : Page
         };
         var dueDate = new CalendarDatePicker
         {
-            Header = "Complete by",
+            Header = "Due date (Windows reminder at 9:00 AM)",
             Date = task.Task.DueAt,
             PlaceholderText = "No completion date"
-        };
-        var duration = new NumberBox
-        {
-            Header = "Estimated minutes",
-            Minimum = 5,
-            Maximum = 480,
-            SmallChange = 5,
-            Value = task.Task.EstimatedMinutes
         };
         var priority = new ComboBox
         {
@@ -144,12 +136,19 @@ public sealed partial class MainPage : Page
             SelectedItem = task.Task.Priority,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
+        var priorityHelp = new TextBlock
+        {
+            Text = "High priority tasks sort ahead of Normal and Low tasks with the same due date.",
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.7,
+            FontSize = 12
+        };
         var fields = new StackPanel { Spacing = 12 };
         fields.Children.Add(titleBox);
         fields.Children.Add(areaBox);
         fields.Children.Add(dueDate);
-        fields.Children.Add(duration);
         fields.Children.Add(priority);
+        fields.Children.Add(priorityHelp);
 
         var dialog = new ContentDialog
         {
@@ -173,8 +172,72 @@ public sealed partial class MainPage : Page
             titleBox.Text,
             areaId,
             dueDate.Date,
-            double.IsNaN(duration.Value) ? 30 : (int)duration.Value,
             selectedPriority);
+    }
+
+    private async void DeleteArea_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedAreaId is not string areaId)
+        {
+            return;
+        }
+
+        var area = ViewModel.Areas.First(item => item.Id == areaId);
+        var taskCount = ViewModel.GetTaskCount(areaId);
+        var replacements = ViewModel.Areas.Where(item => item.Id != areaId).ToArray();
+        var replacementBox = new ComboBox
+        {
+            Header = "Move tasks to",
+            ItemsSource = replacements,
+            DisplayMemberPath = nameof(AreaOption.Name),
+            SelectedValuePath = nameof(AreaOption.Id),
+            SelectedIndex = replacements.Length > 0 ? 0 : -1,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Visibility = taskCount > 0 ? Visibility.Visible : Visibility.Collapsed
+        };
+        var content = new StackPanel { Spacing = 12 };
+        content.Children.Add(new TextBlock
+        {
+            Text = taskCount == 0
+                ? $"Delete '{area.Name}'?"
+                : $"'{area.Name}' contains {taskCount} task(s). They will be moved before the area is deleted.",
+            TextWrapping = TextWrapping.Wrap
+        });
+        content.Children.Add(replacementBox);
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "Delete area",
+            Content = content,
+            PrimaryButtonText = "Delete",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var replacementAreaId = taskCount > 0
+            ? replacementBox.SelectedValue as string
+            : null;
+        if (taskCount > 0 && replacementAreaId is null)
+        {
+            ViewModel.StatusText = "Choose where the area's tasks should move.";
+            return;
+        }
+
+        await ViewModel.DeleteAreaAsync(areaId, replacementAreaId);
+        var navigationItem = Navigation.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => Equals(item.Tag, $"area:{areaId}"));
+        if (navigationItem is not null)
+        {
+            Navigation.MenuItems.Remove(navigationItem);
+        }
+
+        Navigation.SelectedItem = Navigation.MenuItems[0];
     }
 
     private void TaskList_DragItemsStarting(

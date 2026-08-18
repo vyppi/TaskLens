@@ -100,6 +100,57 @@ public sealed class SqliteTaskRepository(string databasePath) : ITaskRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task DeleteAreaAsync(
+        string areaId,
+        string? replacementAreaId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(areaId);
+        if (replacementAreaId == areaId)
+        {
+            throw new ArgumentException(
+                "The replacement area must be different.",
+                nameof(replacementAreaId));
+        }
+
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction =
+            await connection.BeginTransactionAsync(cancellationToken);
+
+        var countCommand = connection.CreateCommand();
+        countCommand.Transaction = (SqliteTransaction)transaction;
+        countCommand.CommandText =
+            "SELECT COUNT(*) FROM Tasks WHERE AreaId = $areaId;";
+        countCommand.Parameters.AddWithValue("$areaId", areaId);
+        var taskCount = Convert.ToInt32(
+            await countCommand.ExecuteScalarAsync(cancellationToken));
+
+        if (taskCount > 0 && string.IsNullOrWhiteSpace(replacementAreaId))
+        {
+            throw new InvalidOperationException(
+                "The area contains tasks and requires a replacement area.");
+        }
+
+        if (taskCount > 0)
+        {
+            var moveCommand = connection.CreateCommand();
+            moveCommand.Transaction = (SqliteTransaction)transaction;
+            moveCommand.CommandText =
+                "UPDATE Tasks SET AreaId = $replacementAreaId WHERE AreaId = $areaId;";
+            moveCommand.Parameters.AddWithValue("$replacementAreaId", replacementAreaId!);
+            moveCommand.Parameters.AddWithValue("$areaId", areaId);
+            await moveCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        var deleteCommand = connection.CreateCommand();
+        deleteCommand.Transaction = (SqliteTransaction)transaction;
+        deleteCommand.CommandText = "DELETE FROM Areas WHERE Id = $areaId;";
+        deleteCommand.Parameters.AddWithValue("$areaId", areaId);
+        await deleteCommand.ExecuteNonQueryAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<TaskItem>> GetTasksAsync(
         CancellationToken cancellationToken = default)
     {
@@ -110,7 +161,7 @@ public sealed class SqliteTaskRepository(string databasePath) : ITaskRepository
         var command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT Id, Title, Notes, AreaId, DueAt, EstimatedMinutes, Priority,
+            SELECT Id, Title, Notes, AreaId, DueAt, Priority,
                    IsCompleted, Source, SourceExcerpt, Rationale, Confidence, CreatedAt
             FROM Tasks
             ORDER BY IsCompleted, COALESCE(DueAt, '9999-12-31'), Priority DESC, CreatedAt DESC;
@@ -125,14 +176,13 @@ public sealed class SqliteTaskRepository(string databasePath) : ITaskRepository
                 reader.GetString(2),
                 reader.GetString(3),
                 ReadDate(reader, 4),
-                reader.GetInt32(5),
-                (TaskPriority)reader.GetInt32(6),
-                reader.GetBoolean(7),
-                (TaskSource)reader.GetInt32(8),
+                (TaskPriority)reader.GetInt32(5),
+                reader.GetBoolean(6),
+                (TaskSource)reader.GetInt32(7),
+                reader.GetString(8),
                 reader.GetString(9),
-                reader.GetString(10),
-                reader.GetDouble(11),
-                ReadRequiredDate(reader, 12)));
+                reader.GetDouble(10),
+                ReadRequiredDate(reader, 11)));
         }
 
         return tasks;
@@ -177,7 +227,7 @@ public sealed class SqliteTaskRepository(string databasePath) : ITaskRepository
         command.Parameters.AddWithValue(
             "$dueAt",
             task.DueAt?.ToString("O", CultureInfo.InvariantCulture) ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$estimatedMinutes", task.EstimatedMinutes);
+        command.Parameters.AddWithValue("$estimatedMinutes", 0);
         command.Parameters.AddWithValue("$priority", (int)task.Priority);
         command.Parameters.AddWithValue("$isCompleted", task.IsCompleted);
         command.Parameters.AddWithValue("$source", (int)task.Source);

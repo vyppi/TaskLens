@@ -54,6 +54,15 @@
                             <TextBlock Text="New area" />
                         </StackPanel>
                     </Button>
+                    <Button
+                        Click="DeleteArea_Click"
+                        HorizontalAlignment="Stretch"
+                        IsEnabled="{x:Bind ViewModel.CanDeleteSelectedArea, Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE74D;" />
+                            <TextBlock Text="Delete selected area" />
+                        </StackPanel>
+                    </Button>
                     <TextBlock Text="TaskLens" Style="{StaticResource BodyStrongTextBlockStyle}" />
                     <TextBlock Text="Local-first. Review before create." Opacity="0.65" FontSize="12" />
                 </StackPanel>

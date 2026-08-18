@@ -15,6 +15,8 @@ namespace TaskLens_App;
 /// </summary>
 public partial class App : Application
 {
+    public static string? NotificationRegistrationError { get; private set; }
+
     /// <summary>
     /// The main application window. Use <c>App.Window</c> from any class that needs
     /// the window reference (for dialogs, pickers, interop, etc.).
@@ -54,6 +56,15 @@ public partial class App : Application
     {
         try
         {
+            try
+            {
+                Microsoft.Windows.AppNotifications.AppNotificationManager.Default.Register();
+            }
+            catch (System.Runtime.InteropServices.COMException exception)
+            {
+                NotificationRegistrationError = exception.Message;
+            }
+
             Window = new MainWindow();
             DispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
             Window.Activate();

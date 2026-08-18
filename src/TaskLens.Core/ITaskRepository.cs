@@ -11,6 +11,11 @@ public interface ITaskRepository
         WorkArea area,
         CancellationToken cancellationToken = default);
 
+    Task DeleteAreaAsync(
+        string areaId,
+        string? replacementAreaId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<TaskItem>> GetTasksAsync(
         CancellationToken cancellationToken = default);
 

@@ -3,13 +3,16 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
 using System.Collections.ObjectModel;
 using TaskLens.Core;
+using TaskLens_App.Services;
 
 namespace TaskLens_App.ViewModels;
 
 public partial class MainPageViewModel : ObservableObject
 {
     private readonly ITaskRepository _repository;
-    private readonly ITaskExtractionProvider _extractionProvider;
+    private readonly TaskReminderService _reminderService = new();
+    private ITaskExtractionProvider _extractionProvider =
+        new RuleBasedTaskExtractionProvider();
     private readonly List<TaskItem> _allTasks = [];
 
     public MainPageViewModel()
@@ -19,7 +22,6 @@ public partial class MainPageViewModel : ObservableObject
             "TaskLens");
         _repository = new SqliteTaskRepository(
             Path.Combine(dataDirectory, "tasklens.db"));
-        _extractionProvider = CreateExtractionProvider();
     }
 
     public ObservableCollection<AreaOption> Areas { get; } = [];
@@ -57,6 +59,9 @@ public partial class MainPageViewModel : ObservableObject
 
     public string CaptureProviderDescription => _extractionProvider.Name;
 
+    public bool CanDeleteSelectedArea =>
+        SelectedAreaId is not null && Areas.Count > 1;
+
     public async Task InitializeAsync()
     {
         IsBusy = true;
@@ -70,6 +75,11 @@ public partial class MainPageViewModel : ObservableObject
             }
 
             await ReloadAsync();
+            _extractionProvider =
+                WindowsLocalTaskExtractionProvider.IsPotentiallyAvailable()
+                    ? new WindowsLocalTaskExtractionProvider()
+                    : new RuleBasedTaskExtractionProvider();
+            OnPropertyChanged(nameof(CaptureProviderDescription));
             StatusText = $"{_extractionProvider.Name} ready";
         }
         finally
@@ -94,7 +104,6 @@ public partial class MainPageViewModel : ObservableObject
             string.Empty,
             SelectedAreaId ?? Areas.FirstOrDefault()?.Id ?? "general",
             SelectedView == "My Day" ? DateTimeOffset.Now.Date.AddHours(17) : null,
-            30,
             TaskPriority.Normal,
             false,
             TaskSource.Manual,
@@ -103,6 +112,7 @@ public partial class MainPageViewModel : ObservableObject
             1,
             DateTimeOffset.UtcNow);
         await _repository.SaveTaskAsync(task);
+        TryScheduleReminder(task);
         QuickTaskTitle = string.Empty;
         await ReloadAsync();
         StatusText = "Task added";
@@ -136,13 +146,13 @@ public partial class MainPageViewModel : ObservableObject
                 ? "No clear action items found. Try more explicit action language."
                 : $"{Suggestions.Count} suggestions from {result.ProviderName}";
         }
-        catch (HttpRequestException exception)
-        {
-            StatusText = $"Cloud AI request failed: {exception.Message}";
-        }
         catch (System.Text.Json.JsonException exception)
         {
-            StatusText = $"Cloud AI response was invalid: {exception.Message}";
+            StatusText = $"AI response was invalid: {exception.Message}";
+        }
+        catch (InvalidOperationException exception)
+        {
+            StatusText = $"AI extraction is unavailable: {exception.Message}";
         }
         finally
         {
@@ -163,20 +173,21 @@ public partial class MainPageViewModel : ObservableObject
         foreach (var item in selected)
         {
             var suggestion = item.Suggestion;
-            await _repository.SaveTaskAsync(new TaskItem(
+            var task = new TaskItem(
                 Guid.NewGuid().ToString("N"),
                 suggestion.Title,
                 string.Empty,
                 suggestion.AreaId,
                 suggestion.DueAt,
-                suggestion.EstimatedMinutes,
                 suggestion.Priority,
                 false,
                 TaskSource.BrainDump,
                 suggestion.SourceExcerpt,
                 suggestion.Rationale,
                 suggestion.Confidence,
-                DateTimeOffset.UtcNow));
+                DateTimeOffset.UtcNow);
+            await _repository.SaveTaskAsync(task);
+            TryScheduleReminder(task);
         }
 
         Suggestions.Clear();
@@ -190,12 +201,14 @@ public partial class MainPageViewModel : ObservableObject
     {
         var updated = item.Task with { IsCompleted = isCompleted };
         await _repository.SaveTaskAsync(updated);
+        TryScheduleReminder(updated);
         await ReloadAsync();
         StatusText = isCompleted ? "Task completed" : "Task reopened";
     }
 
     public async Task DeleteAsync(TaskCardViewModel item)
     {
+        TryCancelReminder(item.Task.Id);
         await _repository.DeleteTaskAsync(item.Task.Id);
         await ReloadAsync();
         StatusText = "Task deleted";
@@ -215,6 +228,7 @@ public partial class MainPageViewModel : ObservableObject
             "#2563EB");
         await _repository.CreateAreaAsync(area);
         Areas.Add(new AreaOption(area.Id, area.Name, area.Color));
+        OnPropertyChanged(nameof(CanDeleteSelectedArea));
         StatusText = $"Area '{area.Name}' created";
     }
 
@@ -223,7 +237,6 @@ public partial class MainPageViewModel : ObservableObject
         string title,
         string areaId,
         DateTimeOffset? dueAt,
-        int estimatedMinutes,
         TaskPriority priority)
     {
         var updated = item.Task with
@@ -231,10 +244,10 @@ public partial class MainPageViewModel : ObservableObject
             Title = title.Trim(),
             AreaId = areaId,
             DueAt = dueAt,
-            EstimatedMinutes = Math.Clamp(estimatedMinutes, 5, 480),
             Priority = priority
         };
         await _repository.SaveTaskAsync(updated);
+        TryScheduleReminder(updated);
         await ReloadAsync();
         StatusText = "Task updated";
     }
@@ -253,6 +266,27 @@ public partial class MainPageViewModel : ObservableObject
         StatusText = $"Task moved to {areaName}";
     }
 
+    public int GetTaskCount(string areaId) =>
+        _allTasks.Count(task => task.AreaId == areaId);
+
+    public async Task DeleteAreaAsync(string areaId, string? replacementAreaId)
+    {
+        if (Areas.Count <= 1)
+        {
+            throw new InvalidOperationException("At least one area is required.");
+        }
+
+        await _repository.DeleteAreaAsync(areaId, replacementAreaId);
+        var area = Areas.First(item => item.Id == areaId);
+        Areas.Remove(area);
+        SelectedAreaId = null;
+        SelectedView = "My Day";
+        IsCaptureVisible = false;
+        await ReloadAsync();
+        OnPropertyChanged(nameof(CanDeleteSelectedArea));
+        StatusText = $"Area '{area.Name}' deleted";
+    }
+
     public void SelectView(string view)
     {
         SelectedView = view;
@@ -267,6 +301,9 @@ public partial class MainPageViewModel : ObservableObject
         OnPropertyChanged(nameof(TaskListVisibility));
     }
 
+    partial void OnSelectedAreaIdChanged(string? value) =>
+        OnPropertyChanged(nameof(CanDeleteSelectedArea));
+
     public void SelectArea(string areaId)
     {
         SelectedAreaId = areaId;
@@ -279,6 +316,17 @@ public partial class MainPageViewModel : ObservableObject
     {
         _allTasks.Clear();
         _allTasks.AddRange(await _repository.GetTasksAsync());
+        if (App.NotificationRegistrationError is null)
+        {
+            try
+            {
+                _reminderService.Synchronize(_allTasks);
+            }
+            catch (System.Runtime.InteropServices.COMException exception)
+            {
+                StatusText = $"Windows reminders are unavailable: {exception.Message}";
+            }
+        }
         ApplyFilter();
     }
 
@@ -319,23 +367,40 @@ public partial class MainPageViewModel : ObservableObject
         }
     }
 
-    private static ITaskExtractionProvider CreateExtractionProvider()
+    private void TryScheduleReminder(TaskItem task)
     {
-        var endpoint = Environment.GetEnvironmentVariable("TASKLENS_AI_ENDPOINT");
-        var apiKey = Environment.GetEnvironmentVariable("TASKLENS_AI_API_KEY");
-        var model = Environment.GetEnvironmentVariable("TASKLENS_AI_MODEL");
-        if (Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) &&
-            !string.IsNullOrWhiteSpace(apiKey) &&
-            !string.IsNullOrWhiteSpace(model))
+        if (App.NotificationRegistrationError is not null)
         {
-            return new OpenAiCompatibleTaskExtractionProvider(
-                new HttpClient { Timeout = TimeSpan.FromSeconds(60) },
-                uri,
-                apiKey,
-                model);
+            StatusText =
+                $"Windows reminders are unavailable: {App.NotificationRegistrationError}";
+            return;
         }
 
-        return new RuleBasedTaskExtractionProvider();
+        try
+        {
+            _reminderService.Schedule(task);
+        }
+        catch (System.Runtime.InteropServices.COMException exception)
+        {
+            StatusText = $"Windows reminder could not be scheduled: {exception.Message}";
+        }
+    }
+
+    private void TryCancelReminder(string taskId)
+    {
+        if (App.NotificationRegistrationError is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            _reminderService.Cancel(taskId);
+        }
+        catch (System.Runtime.InteropServices.COMException exception)
+        {
+            StatusText = $"Windows reminder could not be cancelled: {exception.Message}";
+        }
     }
 }
 
@@ -360,7 +425,7 @@ public sealed class TaskCardViewModel(TaskItem task, string areaName)
                 : Task.DueAt.Value.Date == DateTimeOffset.Now.Date
                     ? "Today"
                     : Task.DueAt.Value.ToString("ddd, MMM d");
-            return $"{due}  •  {Task.EstimatedMinutes} min  •  {Task.Priority}";
+            return $"{due}  •  {Task.Priority} priority";
         }
     }
 
@@ -380,7 +445,7 @@ public partial class SuggestedTaskViewModel(
     public string AreaName => areaName;
 
     public string Metadata =>
-        $"{Suggestion.EstimatedMinutes} min  •  {Suggestion.Priority}  •  {Suggestion.Confidence:P0} confidence";
+        $"{Suggestion.Priority} priority  •  {Suggestion.Confidence:P0} confidence";
 
     public string Explanation => Suggestion.Rationale;
 

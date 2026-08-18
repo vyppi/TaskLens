@@ -29,7 +29,6 @@ public sealed class RuleBasedTaskExtractionProviderTests
         Assert.HasCount(2, result.Suggestions);
         Assert.AreEqual("launch", result.Suggestions[0].AreaId);
         Assert.AreEqual("people", result.Suggestions[1].AreaId);
-        Assert.AreEqual(30, result.Suggestions[1].EstimatedMinutes);
         Assert.IsNotNull(result.Suggestions[1].DueAt);
     }
 

@@ -16,19 +16,21 @@ automation to create or schedule work.
 1. Users can create, complete, reopen, delete, and locally persist tasks.
 2. Users can create their own areas and move tasks between them, including by
    dragging a task onto an area.
+   Deleting an area must move its tasks to another area.
 3. Users can see My Day, Inbox, Upcoming, Completed, and area-filtered views.
 4. Users can paste unstructured notes or transcripts and extract candidate
    action items.
 5. No extracted item becomes a task without explicit review.
 6. Each suggestion displays its source excerpt, rationale, inferred area,
-   priority, estimate, and confidence.
+   priority, and confidence.
 7. The app works offline without authentication.
-8. Cloud AI is optional and secrets are not persisted in the app database.
+8. Supported Copilot+ PCs use the Windows system local language model without
+   requiring API keys.
 9. Builds produce both a self-contained Win32 installer and an MSIX package.
 
 ## Post-MVP
 
-- Editable task details, recurrence, reminders, and search
+- Recurrence and search
 - Explainable My Day planning based on deadlines, priority, and available time
 - Microsoft identity and Outlook mail suggestions
 - Calendar-aware planning

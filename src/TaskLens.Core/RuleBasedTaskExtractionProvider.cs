@@ -62,7 +62,6 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
                 title,
                 InferArea(line, areas),
                 InferDueDate(line),
-                InferDuration(line),
                 InferPriority(line),
                 line.Length <= 180 ? line : $"{line[..177]}...",
                 item.IsListItem
@@ -159,20 +158,6 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
         return null;
     }
 
-    private static int InferDuration(string line)
-    {
-        var match = DurationRegex().Match(line);
-        if (!match.Success)
-        {
-            return 30;
-        }
-
-        var amount = int.Parse(match.Groups["amount"].Value);
-        return match.Groups["unit"].Value.StartsWith("h", StringComparison.OrdinalIgnoreCase)
-            ? Math.Min(amount * 60, 480)
-            : Math.Min(amount, 480);
-    }
-
     private static TaskPriority InferPriority(string line) =>
         line.Contains("urgent", StringComparison.OrdinalIgnoreCase) ||
         line.Contains("asap", StringComparison.OrdinalIgnoreCase) ||
@@ -213,8 +198,4 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
         RegexOptions.IgnoreCase)]
     private static partial Regex ActionPrefixRegex();
 
-    [GeneratedRegex(
-        @"(?<amount>\d{1,3})\s*(?<unit>minutes?|mins?|hours?|hrs?)",
-        RegexOptions.IgnoreCase)]
-    private static partial Regex DurationRegex();
 }

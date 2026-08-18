@@ -13,7 +13,7 @@ $appProject = Join-Path $root "src\TaskLens.App\TaskLens.App.csproj"
 $testProject = Join-Path $root "tests\TaskLens.Core.Tests\TaskLens.Core.Tests.csproj"
 $installerProject = Join-Path $root "installer\TaskLens.Installer.wixproj"
 $artifacts = Join-Path $root "artifacts"
-$publishDir = Join-Path $artifacts "win32\publish"
+$publishDir = Join-Path $artifacts "staging\win32-$([Guid]::NewGuid().ToString('N'))"
 $installerDir = Join-Path $artifacts "win32\installer"
 $msixDir = Join-Path $artifacts "msix\sideload"
 $storeUploadDir = Join-Path $artifacts "msix\store"
@@ -167,6 +167,7 @@ try {
 }
 finally {
     Remove-Item $temporaryPfx -Force -ErrorAction SilentlyContinue
+    Remove-Item $publishDir -Recurse -Force -ErrorAction SilentlyContinue
     if ($certificate) {
         Remove-Item "Cert:\CurrentUser\My\$($certificate.Thumbprint)" -Force -ErrorAction SilentlyContinue
     }
