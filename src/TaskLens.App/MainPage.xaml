@@ -83,7 +83,11 @@
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
 
-                <Grid Grid.Row="1" Margin="0,22,0,18" ColumnSpacing="10">
+                <Grid
+                    Grid.Row="1"
+                    Margin="0,22,0,18"
+                    ColumnSpacing="10"
+                    Visibility="{x:Bind ViewModel.TaskListVisibility, Mode=OneWay}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -117,7 +121,7 @@
                                     IsClosable="False"
                                     Severity="Informational"
                                     Title="Capture provider"
-                                    Message="{x:Bind ViewModel.CaptureProviderDescription}" />
+                                    Message="{x:Bind ViewModel.CaptureProviderDescription, Mode=OneWay}" />
                                 <TextBox
                                     AcceptsReturn="True"
                                     Height="180"
@@ -145,7 +149,9 @@
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" />
+                                            <CheckBox
+                                                AutomationProperties.Name="Select suggested task"
+                                                IsChecked="{x:Bind IsSelected, Mode=TwoWay}" />
                                             <StackPanel Grid.Column="1" Spacing="4">
                                                 <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
                                                 <TextBlock Text="{x:Bind AreaName}" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
@@ -188,6 +194,7 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <CheckBox
+                                            AutomationProperties.Name="Mark task complete"
                                             IsChecked="{x:Bind IsCompleted}"
                                             Click="TaskCompletion_Click"
                                             Tag="{x:Bind}" />
@@ -199,6 +206,7 @@
                                         </StackPanel>
                                         <Button
                                             Grid.Column="2"
+                                            AutomationProperties.Name="Edit task"
                                             Click="EditTask_Click"
                                             Tag="{x:Bind}"
                                             ToolTipService.ToolTip="Edit">
@@ -206,6 +214,7 @@
                                         </Button>
                                         <Button
                                             Grid.Column="3"
+                                            AutomationProperties.Name="Delete task"
                                             Click="DeleteTask_Click"
                                             Tag="{x:Bind}"
                                             ToolTipService.ToolTip="Delete">
@@ -216,6 +225,29 @@
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
+
+                    <StackPanel
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        Visibility="{x:Bind ViewModel.EmptyTaskListVisibility, Mode=OneWay}">
+                        <FontIcon
+                            HorizontalAlignment="Center"
+                            FontSize="32"
+                            Glyph="&#xE73E;"
+                            Opacity="0.55" />
+                        <TextBlock
+                            Text="Nothing here yet"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            HorizontalAlignment="Center" />
+                        <TextBlock
+                            Text="Add a task above or choose AI Capture to turn notes into tasks."
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            TextAlignment="Center"
+                            TextWrapping="Wrap"
+                            MaxWidth="360" />
+                    </StackPanel>
                 </Grid>
 
                 <Grid Grid.Row="3" Margin="0,12,0,0">

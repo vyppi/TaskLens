@@ -117,7 +117,11 @@ public sealed partial class RuleBasedTaskExtractionProvider : ITaskExtractionPro
 
         return bestMatch is { Score: > 0 }
             ? bestMatch.Area.Id
-            : areas.FirstOrDefault()?.Id ?? "general";
+            : areas.FirstOrDefault(area =>
+                    area.Id.Equals("general", StringComparison.OrdinalIgnoreCase) ||
+                    area.Name.Equals("General", StringComparison.OrdinalIgnoreCase))?.Id
+                ?? areas.FirstOrDefault()?.Id
+                ?? "general";
     }
 
     private static IEnumerable<string> AreaTokens(string areaName) =>

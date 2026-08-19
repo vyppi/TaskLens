@@ -12,10 +12,21 @@ public sealed class WindowsLocalTaskExtractionProvider : ITaskExtractionProvider
 
     public string Name => "Windows local AI (Copilot+ PC)";
 
-    public static bool IsPotentiallyAvailable()
+    public static LocalAiAvailability GetAvailability()
     {
-        var state = LanguageModel.GetReadyState();
-        return state is AIFeatureReadyState.Ready or AIFeatureReadyState.NotReady;
+        try
+        {
+            var state = LanguageModel.GetReadyState();
+            return new LocalAiAvailability(
+                state is AIFeatureReadyState.Ready or AIFeatureReadyState.NotReady,
+                state.ToString());
+        }
+        catch (System.Runtime.InteropServices.COMException exception)
+        {
+            return new LocalAiAvailability(
+                false,
+                $"Activation failed (0x{exception.HResult:X8})");
+        }
     }
 
     public async Task<ExtractionResult> ExtractAsync(
@@ -28,7 +39,11 @@ public sealed class WindowsLocalTaskExtractionProvider : ITaskExtractionProvider
 
         _model ??= await CreateModelAsync();
         var validAreas = areas.Select(area => area.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var fallbackArea = areas.FirstOrDefault()?.Id ?? "general";
+        var fallbackArea = areas.FirstOrDefault(area =>
+                area.Id.Equals("general", StringComparison.OrdinalIgnoreCase) ||
+                area.Name.Equals("General", StringComparison.OrdinalIgnoreCase))?.Id
+            ?? areas.FirstOrDefault()?.Id
+            ?? "general";
         var areaList = string.Join(", ", areas.Select(area => $"{area.Id}: {area.Name}"));
 
         var prompt =
@@ -143,3 +158,5 @@ public sealed class WindowsLocalTaskExtractionProvider : ITaskExtractionProvider
         string? Rationale,
         double Confidence);
 }
+
+public sealed record LocalAiAvailability(bool CanUseModel, string State);

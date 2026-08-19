@@ -10,6 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $appProject = Join-Path $root "src\TaskLens.App\TaskLens.App.csproj"
+$appManifest = Join-Path $root "src\TaskLens.App\Package.appxmanifest"
 $testProject = Join-Path $root "tests\TaskLens.Core.Tests\TaskLens.Core.Tests.csproj"
 $installerProject = Join-Path $root "installer\TaskLens.Installer.wixproj"
 $artifacts = Join-Path $root "artifacts"
@@ -20,35 +21,53 @@ $portableZip = Join-Path $artifacts "win32\TaskLens-win-x64.zip"
 $msixDir = Join-Path $artifacts "msix\sideload\$buildId"
 $storeUploadDir = Join-Path $artifacts "msix\store\$buildId"
 $certificateDir = Join-Path $artifacts "certificate"
-$temporaryPfx = Join-Path ([System.IO.Path]::GetTempPath()) "tasklens-$([Guid]::NewGuid().ToString('N')).pfx"
-$certificatePassword = [Convert]::ToBase64String(
-    [Security.Cryptography.RandomNumberGenerator]::GetBytes(24))
+$buildNumber = [int](& git -C $root rev-list --count HEAD)
+if (& git -C $root status --porcelain) {
+    $buildNumber++
+}
+if ($buildNumber -gt 65535) {
+    throw "The Git commit count exceeds the MSIX build component limit."
+}
+$packageVersion = "1.0.$buildNumber.0"
+$originalManifestBytes = [IO.File]::ReadAllBytes($appManifest)
+$originalManifest = [Text.Encoding]::UTF8.GetString($originalManifestBytes)
 $certificate = $null
 
 Remove-Item $artifacts -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $publishDir, $installerDir, $msixDir, $storeUploadDir, $certificateDir | Out-Null
 
 try {
+    [xml]$manifestXml = $originalManifest
+    $manifestXml.Package.Identity.Version = $packageVersion
+    $manifestXml.Save($appManifest)
+
     dotnet test $testProject -c $Configuration
     if ($LASTEXITCODE -ne 0) {
         throw "Tests failed."
     }
 
-    $certificate = New-SelfSignedCertificate `
-        -Type CodeSigningCert `
-        -Subject "CN=Vipul Bhojwani" `
-        -CertStoreLocation "Cert:\CurrentUser\My" `
-        -KeyExportPolicy Exportable `
-        -KeyLength 2048 `
-        -HashAlgorithm SHA256 `
-        -TextExtension @("2.5.29.19={critical}{text}ca=false") `
-        -NotAfter (Get-Date).AddYears(2)
+    $certificate = Get-ChildItem "Cert:\CurrentUser\My" |
+        Where-Object {
+            $_.Subject -eq "CN=Vipul Bhojwani" -and
+            $_.FriendlyName -eq "TaskLens Development Signing" -and
+            $_.HasPrivateKey -and
+            $_.NotAfter -gt (Get-Date).AddDays(30)
+        } |
+        Sort-Object NotAfter -Descending |
+        Select-Object -First 1
+    if (-not $certificate) {
+        $certificate = New-SelfSignedCertificate `
+            -Type CodeSigningCert `
+            -Subject "CN=Vipul Bhojwani" `
+            -FriendlyName "TaskLens Development Signing" `
+            -CertStoreLocation "Cert:\CurrentUser\My" `
+            -KeyExportPolicy Exportable `
+            -KeyLength 2048 `
+            -HashAlgorithm SHA256 `
+            -TextExtension @("2.5.29.19={critical}{text}ca=false") `
+            -NotAfter (Get-Date).AddYears(2)
+    }
 
-    $securePassword = ConvertTo-SecureString $certificatePassword -AsPlainText -Force
-    Export-PfxCertificate `
-        -Cert $certificate `
-        -FilePath $temporaryPfx `
-        -Password $securePassword | Out-Null
     Export-Certificate `
         -Cert $certificate `
         -FilePath (Join-Path $certificateDir "TaskLens-Development.cer") | Out-Null
@@ -79,7 +98,7 @@ try {
     Get-ChildItem $publishDir -Recurse -File |
         Where-Object Extension -In ".exe", ".dll" |
         ForEach-Object {
-            & $signTool sign /fd SHA256 /f $temporaryPfx /p $certificatePassword $_.FullName | Out-Null
+            & $signTool sign /fd SHA256 /sha1 $certificate.Thumbprint $_.FullName | Out-Null
             if ($LASTEXITCODE -ne 0) {
                 throw "Signing failed for $($_.FullName)."
             }
@@ -103,7 +122,7 @@ try {
         throw "The MSI build completed without producing an installer."
     }
 
-    & $signTool sign /fd SHA256 /f $temporaryPfx /p $certificatePassword $msi.FullName | Out-Null
+    & $signTool sign /fd SHA256 /sha1 $certificate.Thumbprint $msi.FullName | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "MSI signing failed."
     }
@@ -168,6 +187,7 @@ try {
 
     Write-Host ""
     Write-Host "TaskLens artifacts:"
+    Write-Host "  Package version: $packageVersion"
     Write-Host "  Portable Win32:  $portableZip"
     Write-Host "  Win32 installer: $($msi.FullName)"
     Write-Host "  Signed MSIX:     $($msix.FullName)"
@@ -175,9 +195,6 @@ try {
     Write-Host "  Test certificate: $(Join-Path $certificateDir 'TaskLens-Development.cer')"
 }
 finally {
-    Remove-Item $temporaryPfx -Force -ErrorAction SilentlyContinue
+    [IO.File]::WriteAllBytes($appManifest, $originalManifestBytes)
     Remove-Item $publishDir -Recurse -Force -ErrorAction SilentlyContinue
-    if ($certificate) {
-        Remove-Item "Cert:\CurrentUser\My\$($certificate.Thumbprint)" -Force -ErrorAction SilentlyContinue
-    }
 }

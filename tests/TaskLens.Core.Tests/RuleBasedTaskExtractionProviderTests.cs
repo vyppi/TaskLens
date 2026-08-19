@@ -73,4 +73,17 @@ public sealed class RuleBasedTaskExtractionProviderTests
 
         Assert.IsEmpty(result.Suggestions);
     }
+
+    [TestMethod]
+    public async Task ExtractAsync_UnclassifiedAction_UsesGeneralArea()
+    {
+        var provider = new RuleBasedTaskExtractionProvider();
+
+        var result = await provider.ExtractAsync(
+            "TODO: send the status update.",
+            Areas);
+
+        Assert.HasCount(1, result.Suggestions);
+        Assert.AreEqual("general", result.Suggestions[0].AreaId);
+    }
 }

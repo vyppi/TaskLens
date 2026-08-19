@@ -57,7 +57,14 @@ public partial class MainPageViewModel : ObservableObject
     public Visibility TaskListVisibility =>
         IsCaptureVisible ? Visibility.Collapsed : Visibility.Visible;
 
-    public string CaptureProviderDescription => _extractionProvider.Name;
+    public Visibility EmptyTaskListVisibility =>
+        !IsCaptureVisible && VisibleTasks.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    [ObservableProperty]
+    public partial string CaptureProviderDescription { get; set; } =
+        "Checking Windows local AI...";
 
     public bool CanDeleteSelectedArea =>
         SelectedAreaId is not null && Areas.Count > 1;
@@ -75,11 +82,19 @@ public partial class MainPageViewModel : ObservableObject
             }
 
             await ReloadAsync();
-            _extractionProvider =
-                WindowsLocalTaskExtractionProvider.IsPotentiallyAvailable()
-                    ? new WindowsLocalTaskExtractionProvider()
-                    : new RuleBasedTaskExtractionProvider();
-            OnPropertyChanged(nameof(CaptureProviderDescription));
+            var localAi = WindowsLocalTaskExtractionProvider.GetAvailability();
+            if (localAi.CanUseModel)
+            {
+                _extractionProvider = new WindowsLocalTaskExtractionProvider();
+                CaptureProviderDescription =
+                    $"Windows local AI (system state: {localAi.State})";
+            }
+            else
+            {
+                _extractionProvider = new RuleBasedTaskExtractionProvider();
+                CaptureProviderDescription =
+                    $"{_extractionProvider.Name}. Windows local AI state: {localAi.State}";
+            }
             StatusText = $"{_extractionProvider.Name} ready";
         }
         finally
@@ -102,7 +117,7 @@ public partial class MainPageViewModel : ObservableObject
             Guid.NewGuid().ToString("N"),
             title,
             string.Empty,
-            SelectedAreaId ?? Areas.FirstOrDefault()?.Id ?? "general",
+            SelectedAreaId ?? GetDefaultAreaId(),
             SelectedView == "My Day" ? DateTimeOffset.Now.Date.AddHours(17) : null,
             TaskPriority.Normal,
             false,
@@ -365,7 +380,15 @@ public partial class MainPageViewModel : ObservableObject
                 ?? task.AreaId;
             VisibleTasks.Add(new TaskCardViewModel(task, areaName));
         }
+        OnPropertyChanged(nameof(EmptyTaskListVisibility));
     }
+
+    private string GetDefaultAreaId() =>
+        Areas.FirstOrDefault(area =>
+            area.Id.Equals("general", StringComparison.OrdinalIgnoreCase) ||
+            area.Name.Equals("General", StringComparison.OrdinalIgnoreCase))?.Id
+        ?? Areas.FirstOrDefault()?.Id
+        ?? "general";
 
     private void TryScheduleReminder(TaskItem task)
     {

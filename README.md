@@ -70,9 +70,11 @@ For portable testing, extract `TaskLens-win-x64.zip` into a new folder and run
 the application depends on the matching DLLs and resources beside it.
 - `artifacts\certificate\TaskLens-Development.cer` for local installation
 
-The script generates an ephemeral self-signed certificate, signs every Win32 PE
-file plus the MSI, signs the MSIX, exports only the public certificate, and
-deletes the private key. The certificate is suitable for local testing only.
+The script creates or reuses a persistent self-signed development certificate,
+signs every Win32 PE file plus the MSI, signs the MSIX, and exports the public
+certificate. It reuses one development certificate from the current user's
+certificate store so later MSIX builds update cleanly after the certificate is
+trusted once. The certificate is suitable for local testing only.
 Microsoft's published Store policy requires public Win32 installers and their
 contained PE files to chain to a certificate authority in the Microsoft Trusted
 Root Program. Partner Center may therefore reject the experimental self-signed
