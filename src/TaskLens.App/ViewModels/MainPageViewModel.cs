@@ -308,6 +308,9 @@ public partial class MainPageViewModel : ObservableObject
         SelectedAreaId = null;
         IsCaptureVisible = view == "AI Capture";
         ApplyFilter();
+        StatusText = IsCaptureVisible
+            ? $"{_extractionProvider.Name} ready"
+            : $"{view} ready";
     }
 
     partial void OnIsCaptureVisibleChanged(bool value)
@@ -325,6 +328,7 @@ public partial class MainPageViewModel : ObservableObject
         SelectedView = Areas.First(area => area.Id == areaId).Name;
         IsCaptureVisible = false;
         ApplyFilter();
+        StatusText = $"{SelectedView} ready";
     }
 
     private async Task ReloadAsync()
