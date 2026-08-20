@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: tasklens-win32-store
@@ -28,9 +28,6 @@ jobs:
           SELLER_ID: ${{ secrets.SELLER_ID }}
           CERTIFICATE_BASE64: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
-          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
-          STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
-          STORAGE_CONTAINER: ${{ vars.AZURE_STORAGE_CONTAINER }}
           PRODUCT_ID: ${{ vars.STORE_PRODUCT_ID }}
         run: |
           $required = @{
@@ -40,9 +37,6 @@ jobs:
             SELLER_ID = $env:SELLER_ID
             WINDOWS_SIGNING_CERTIFICATE_BASE64 = $env:CERTIFICATE_BASE64
             WINDOWS_SIGNING_CERTIFICATE_PASSWORD = $env:CERTIFICATE_PASSWORD
-            AZURE_STORAGE_CONNECTION_STRING = $env:AZURE_STORAGE_CONNECTION_STRING
-            AZURE_STORAGE_ACCOUNT = $env:STORAGE_ACCOUNT
-            AZURE_STORAGE_CONTAINER = $env:STORAGE_CONTAINER
             STORE_PRODUCT_ID = $env:PRODUCT_ID
           }
           $missing = @(
@@ -119,31 +113,23 @@ jobs:
       - name: Publish immutable installer URL
         shell: pwsh
         env:
-          STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
-          STORAGE_CONTAINER: ${{ vars.AZURE_STORAGE_CONTAINER }}
-          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ steps.version.outputs.release_tag }}"
           $msi = "${{ steps.package.outputs.msi_path }}"
-          $blob = "tasklens/$tag/TaskLens.Installer.msi"
-          az storage blob upload `
-            --container-name $env:STORAGE_CONTAINER `
-            --name "public/privacy.html" `
-            --file ".\store-listing\public\privacy.html" `
-            --overwrite true `
-            --content-type "text/html; charset=utf-8" `
-            --content-cache-control "public, max-age=3600" `
-            --only-show-errors
-          az storage blob upload `
-            --container-name $env:STORAGE_CONTAINER `
-            --name $blob `
-            --file $msi `
-            --overwrite false `
-            --content-type "application/octet-stream" `
-            --content-cache-control "public, max-age=31536000, immutable" `
-            --only-show-errors
+          $notes = @"
+          TaskLens ${{ steps.version.outputs.version }}
 
-          $url = "https://$($env:STORAGE_ACCOUNT).blob.core.windows.net/$($env:STORAGE_CONTAINER)/$blob"
+          SHA-256: ${{ steps.package.outputs.sha256 }}
+          Source commit: ${{ github.sha }}
+          "@
+          gh release create $tag `
+            "$msi#TaskLens.Installer.msi" `
+            --target "${{ github.sha }}" `
+            --title "TaskLens ${{ steps.version.outputs.version }}" `
+            --notes $notes
+
+          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/TaskLens.Installer.msi"
           Invoke-WebRequest -Method Head -Uri $url -UseBasicParsing | Out-Null
           "STORE_INSTALLER_URL=$url" >> $env:GITHUB_ENV
 

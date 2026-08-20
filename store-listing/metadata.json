@@ -16,9 +16,9 @@
   },
   "properties": {
     "isPrivacyPolicyRequired": true,
-    "privacyPolicyUrl": "https://tasklensstoref8333337.blob.core.windows.net/releases/public/privacy.html",
-    "website": "https://tasklensstoref8333337.blob.core.windows.net/releases/public/privacy.html",
-    "supportContactInfo": "vibhojwa@microsoft.com",
+    "privacyPolicyUrl": "https://github.com/vyppi/TaskLens/blob/main/PRIVACY.md",
+    "website": "https://github.com/vyppi/TaskLens",
+    "supportContactInfo": "https://github.com/vyppi/TaskLens/issues",
     "certificationNotes": "TaskLens is a local-first task manager. The MSI supports silent installation with /qn /norestart and does not require sign-in. Tasks and pasted text remain on the device. Windows local AI is used only when the operating system reports it as available; otherwise the app uses its offline rules-based extractor.",
     "category": "Business",
     "subcategory": "ProjectManagement",
@@ -59,6 +59,6 @@
         "recommendedHardware": "Windows 11 x64 device"
       }
     ],
-    "contactInfo": "vibhojwa@microsoft.com"
+    "contactInfo": "https://github.com/vyppi/TaskLens/issues"
   }
 }

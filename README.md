@@ -84,11 +84,9 @@ the reserved Store identity.
 ## Automated Win32 Store submission
 
 `.github\workflows\publish-win32-store.yml` builds and tests the app on every
-push to `main`, signs the MSI, publishes it at an immutable public Azure Blob
-URL, updates product `f8333337-5231-467d-976e-a8784e31ad07`, and creates the
-Partner Center submission through the MSI/EXE submission API. Azure Blob is
-used because this enterprise-managed GitHub account cannot create public
-repositories, and Partner Center must download the installer anonymously.
+push to `main`, signs the MSI, publishes it as an immutable public GitHub
+Release asset, updates product `f8333337-5231-467d-976e-a8784e31ad07`, and
+creates the Partner Center submission through the MSI/EXE submission API.
 
 Configure these repository secrets:
 
@@ -98,13 +96,9 @@ Configure these repository secrets:
 - `SELLER_ID`
 - `WINDOWS_SIGNING_CERTIFICATE_BASE64`
 - `WINDOWS_SIGNING_CERTIFICATE_PASSWORD`
-- `AZURE_STORAGE_CONNECTION_STRING`
 
-Repository variables:
-
-- `STORE_PRODUCT_ID=f8333337-5231-467d-976e-a8784e31ad07`
-- `AZURE_STORAGE_ACCOUNT=tasklensstoref8333337`
-- `AZURE_STORAGE_CONTAINER=releases`
+The repository variable `STORE_PRODUCT_ID` must be
+`f8333337-5231-467d-976e-a8784e31ad07`.
 
 Store copy and assets live under `store-listing`. Microsoft documents that
 self-signed certificates are not eligible for public MSI/EXE submissions, so
