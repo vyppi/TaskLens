@@ -88,13 +88,14 @@ jobs:
         env:
           CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          $output = & .\scripts\Build-StoreMsi.ps1 `
+          & .\scripts\Build-StoreMsi.ps1 `
             -ProductVersion "${{ steps.version.outputs.version }}" `
             -CertificatePath "$env:SIGNING_CERTIFICATE_PATH" `
-            -CertificatePassword "$env:CERTIFICATE_PASSWORD"
-          $output | Write-Host
-          $msiPath = ($output | Select-String '^MSI_PATH=').Line.Split('=', 2)[1]
-          $hash = ($output | Select-String '^MSI_SHA256=').Line.Split('=', 2)[1]
+            -CertificatePassword "$env:CERTIFICATE_PASSWORD" |
+            Tee-Object -Variable buildOutput |
+            Write-Host
+          $msiPath = ($buildOutput | Select-String '^MSI_PATH=').Line.Split('=', 2)[1]
+          $hash = ($buildOutput | Select-String '^MSI_SHA256=').Line.Split('=', 2)[1]
           "msi_path=$msiPath" >> $env:GITHUB_OUTPUT
           "sha256=$hash" >> $env:GITHUB_OUTPUT
 
