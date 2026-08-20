@@ -17,7 +17,7 @@
       <Directory Id="INSTALLFOLDER" Name="TaskLens" />
     </StandardDirectory>
 
-    <StandardDirectory Id="ProgramMenuFolder">
+    <StandardDirectory Id="CommonProgramsFolder">
       <Directory Id="ApplicationProgramsFolder" Name="TaskLens" />
     </StandardDirectory>
 

@@ -4,5 +4,6 @@
     <Platform>x64</Platform>
     <DefineConstants>PublishDir=$(PublishDir);ProductVersion=$(ProductVersion)</DefineConstants>
     <OutputPath>$(ArtifactDir)</OutputPath>
+    <SuppressIces>ICE03</SuppressIces>
   </PropertyGroup>
 </Project>
