@@ -95,10 +95,20 @@ try {
         }
     }
 
-    $invalidPayloads = $signableFiles |
-        Where-Object { (Get-AuthenticodeSignature $_.FullName).Status -ne "Valid" }
+    $invalidPayloads = $signableFiles | Where-Object {
+        $signature = Get-AuthenticodeSignature $_.FullName
+        $signature.Status -ne "Valid" -and
+            ($null -eq $signature.SignerCertificate -or
+             $signature.SignerCertificate.Thumbprint -ne $certificate.Thumbprint -or
+             $signature.Status -in "HashMismatch", "NotSigned", "NotSupportedFileFormat")
+    }
     if ($invalidPayloads) {
-        throw "One or more Win32 payloads do not have valid Authenticode signatures."
+        $invalidDetails = $invalidPayloads |
+            ForEach-Object {
+                $signature = Get-AuthenticodeSignature $_.FullName
+                "$($_.Name)=$($signature.Status)"
+            }
+        throw "One or more Win32 payloads do not have valid Authenticode signatures: $($invalidDetails -join ', ')"
     }
 
     dotnet build $installerProject `
@@ -128,9 +138,10 @@ try {
     }
 
     $msiSignature = Get-AuthenticodeSignature $msi.FullName
-    if ($msiSignature.Status -ne "Valid" -or
-        $msiSignature.SignerCertificate.Thumbprint -ne $certificate.Thumbprint) {
-        throw "The MSI does not contain the expected valid signature."
+    if ($null -eq $msiSignature.SignerCertificate -or
+        $msiSignature.SignerCertificate.Thumbprint -ne $certificate.Thumbprint -or
+        $msiSignature.Status -in "HashMismatch", "NotSigned", "NotSupportedFileFormat") {
+        throw "The MSI does not contain the expected Authenticode signature."
     }
 
     $outputMsi = Join-Path $OutputDirectory "TaskLens.Installer.msi"
