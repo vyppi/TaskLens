@@ -17,7 +17,7 @@
       <Directory Id="INSTALLFOLDER" Name="TaskLens" />
     </StandardDirectory>
 
-    <StandardDirectory Id="CommonProgramsFolder">
+    <StandardDirectory Id="ProgramMenuFolder">
       <Directory Id="ApplicationProgramsFolder" Name="TaskLens" />
     </StandardDirectory>
 
@@ -36,7 +36,7 @@
         WorkingDirectory="INSTALLFOLDER" />
       <RemoveFolder Id="RemoveApplicationProgramsFolder" On="uninstall" />
       <RegistryValue
-        Root="HKLM"
+        Root="HKCU"
         Key="Software\Prequarto\TaskLens"
         Name="Installed"
         Type="integer"
