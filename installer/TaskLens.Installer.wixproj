@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Package</OutputType>
     <Platform>x64</Platform>
-    <DefineConstants>PublishDir=$(PublishDir)</DefineConstants>
+    <DefineConstants>PublishDir=$(PublishDir);ProductVersion=$(ProductVersion)</DefineConstants>
     <OutputPath>$(ArtifactDir)</OutputPath>
   </PropertyGroup>
 </Project>

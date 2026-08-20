@@ -2,7 +2,7 @@
   <Package
     Name="TaskLens"
     Manufacturer="Vipul Bhojwani"
-    Version="0.1.0"
+    Version="$(var.ProductVersion)"
     UpgradeCode="3D6C02B8-2B4B-4E70-9E7F-EB4AD46F530E"
     Scope="perMachine">
     <MajorUpgrade DowngradeErrorMessage="A newer version of TaskLens is already installed." />

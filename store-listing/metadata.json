@@ -1,0 +1,64 @@
+{
+  "availability": {
+    "markets": [
+      "AU",
+      "CA",
+      "GB",
+      "IN",
+      "NZ",
+      "SG",
+      "US"
+    ],
+    "discoverability": "DISCOVERABLE",
+    "enableInFutureMarkets": true,
+    "pricing": "FREE",
+    "freeTrial": "NO_FREE_TRIAL"
+  },
+  "properties": {
+    "isPrivacyPolicyRequired": true,
+    "privacyPolicyUrl": "https://tasklensstoref8333337.blob.core.windows.net/releases/public/privacy.html",
+    "website": "https://tasklensstoref8333337.blob.core.windows.net/releases/public/privacy.html",
+    "supportContactInfo": "vibhojwa@microsoft.com",
+    "certificationNotes": "TaskLens is a local-first task manager. The MSI supports silent installation with /qn /norestart and does not require sign-in. Tasks and pasted text remain on the device. Windows local AI is used only when the operating system reports it as available; otherwise the app uses its offline rules-based extractor.",
+    "category": "Business",
+    "subcategory": "ProjectManagement",
+    "productDeclarations": {
+      "dependsOnDriversOrNT": false,
+      "accessibilitySupport": false,
+      "penAndInkSupport": false
+    }
+  },
+  "listings": {
+    "language": "en-us",
+    "description": "TaskLens is a local-first Windows task manager that helps turn scattered work into clear next actions. Create your own areas, organize tasks by due date and priority, move work between areas, and receive Windows reminders when tasks are due.\n\nPaste meeting notes, transcripts, or a brain dump into AI Capture. TaskLens extracts suggested action items and shows the source text, rationale, area, priority, and confidence before anything is created. You remain in control of every suggested task.\n\nTaskLens requires no account and stores tasks locally on your Windows device. On supported systems it can use the Windows local language model. When that model is unavailable, TaskLens clearly falls back to its offline rules-based extractor.",
+    "whatsNew": "Improved Microsoft Store release, clearer local AI availability diagnostics, safer area management, reminders, and accessibility improvements.",
+    "productFeatures": [
+      "My Day, Inbox, Upcoming, and Completed planning views",
+      "Create, rename, organize, and safely delete task areas",
+      "Drag tasks between areas",
+      "Edit task title, due date, area, and priority",
+      "Windows reminders for due tasks",
+      "Review action items extracted from meeting notes and transcripts",
+      "Local-first storage with no account required",
+      "Windows local AI when available with an offline fallback"
+    ],
+    "shortDescription": "Turn meeting notes and scattered thoughts into reviewed, organized tasks on Windows.",
+    "searchTerms": [
+      "task manager",
+      "action items",
+      "meeting notes",
+      "productivity",
+      "todo"
+    ],
+    "additionalLicenseTerms": "TaskLens is provided as-is without warranties. You are responsible for reviewing AI- or rules-generated task suggestions before creating or acting on them.",
+    "copyright": "Copyright 2026 Vipul Bhojwani",
+    "developedBy": "Vipul Bhojwani",
+    "requirements": [
+      {
+        "minimumHardware": "Windows 10 or Windows 11 x64 device",
+        "recommendedHardware": "Windows 11 x64 device"
+      }
+    ],
+    "contactInfo": "vibhojwa@microsoft.com"
+  }
+}
