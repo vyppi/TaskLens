@@ -84,9 +84,10 @@ the reserved Store identity.
 ## Automated Win32 Store submission
 
 `.github\workflows\publish-win32-store.yml` builds and tests the app on every
-push to `main`, signs the MSI, publishes it as an immutable public GitHub
-Release asset, updates product `f8333337-5231-467d-976e-a8784e31ad07`, and
-creates the Partner Center submission through the MSI/EXE submission API.
+push to `main`, signs the MSI, publishes it to the `store-artifacts` branch,
+uses an immutable commit-SHA `raw.githubusercontent.com` URL with no redirects,
+updates product `f8333337-5231-467d-976e-a8784e31ad07`, and creates the Partner
+Center submission through the MSI/EXE submission API.
 
 Configure these repository secrets:
 

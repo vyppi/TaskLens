@@ -118,25 +118,39 @@ jobs:
 
       - name: Publish immutable installer URL
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ steps.version.outputs.release_tag }}"
           $msi = "${{ steps.package.outputs.msi_path }}"
-          $notes = @"
-          TaskLens ${{ steps.version.outputs.version }}
+          $artifactWorktree = Join-Path $env:RUNNER_TEMP "tasklens-store-artifacts"
+          Remove-Item $artifactWorktree -Recurse -Force -ErrorAction SilentlyContinue
 
-          SHA-256: ${{ steps.package.outputs.sha256 }}
-          Source commit: ${{ github.sha }}
-          "@
-          gh release create $tag `
-            "$msi#TaskLens.Installer.msi" `
-            --target "${{ github.sha }}" `
-            --title "TaskLens ${{ steps.version.outputs.version }}" `
-            --notes $notes
+          git fetch origin store-artifacts
+          git worktree add --detach $artifactWorktree origin/store-artifacts
+          try {
+            $artifactDirectory = Join-Path $artifactWorktree "releases\$tag"
+            New-Item $artifactDirectory -ItemType Directory -Force | Out-Null
+            Copy-Item $msi (Join-Path $artifactDirectory "TaskLens.Installer.msi")
 
-          $url = "https://github.com/${{ github.repository }}/releases/download/$tag/TaskLens.Installer.msi"
-          Invoke-WebRequest -Method Head -Uri $url -UseBasicParsing | Out-Null
+            git -C $artifactWorktree config user.name "github-actions[bot]"
+            git -C $artifactWorktree config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C $artifactWorktree add "releases\$tag\TaskLens.Installer.msi"
+            git -C $artifactWorktree commit `
+              -m "Publish TaskLens MSI ${{ steps.version.outputs.version }}" `
+              -m "Source commit: ${{ github.sha }}" `
+              -m "SHA-256: ${{ steps.package.outputs.sha256 }}"
+            git -C $artifactWorktree push origin HEAD:store-artifacts
+            $artifactCommit = git -C $artifactWorktree rev-parse HEAD
+          }
+          finally {
+            git worktree remove $artifactWorktree --force
+          }
+
+          $url = "https://raw.githubusercontent.com/${{ github.repository }}/$artifactCommit/releases/$tag/TaskLens.Installer.msi"
+          Invoke-WebRequest `
+            -Method Head `
+            -Uri $url `
+            -MaximumRedirection 0 `
+            -UseBasicParsing | Out-Null
           "STORE_INSTALLER_URL=$url" >> $env:GITHUB_ENV
 
       - name: Update and submit Partner Center draft
